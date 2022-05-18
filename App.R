@@ -148,7 +148,7 @@ shinyApp(
   server = function(input, output, session) {
     
     # reads enrollment data. This data was compiled in a separated R script
-    data <- read_excel("output enroll V3.xlsx")
+    data <- read_excel("output enroll.xlsx")
     data2 <- data[,1:14]
     
     # reactive module to filter 500 and 600 courses
@@ -182,12 +182,15 @@ shinyApp(
       complet_data <- lin_reg(exp_data)
       
       # Graph code
-      graph <- plot_ly(complet_data, x= ~as.factor(TERM), y= ~ENROLL, name = 'Enrollment', 
-              type="scatter", mode="lines", width=800, height=400) %>% 
+      graph <- plot_ly(complet_data, x= ~as.factor(TERM), y= ~ENROLL, 
+                       name = 'Enrollment', type="scatter", mode="lines", 
+                       width=800, height=400) %>% 
         layout( 
           title = list(title="Projection", titlefont = list(size=30)), 
-          xaxis = list(title = "Term", showgrid = FALSE, titlefont = list(size=20), autorange = FALSE),
-          yaxis = list(title = "Enrollment", showgrid = FALSE, titlefont = list(size=20), rangemode = "tozero"),
+          xaxis = list(title = "Term", showgrid = FALSE, titlefont = list(size=20), 
+                       autorange = FALSE),
+          yaxis = list(title = "Enrollment", showgrid = FALSE, titlefont = list(size=20), 
+                       rangemode = "tozero"),
           plot_bgcolor = '#f0f0f0'
         )
      graph <- graph %>% add_trace(y = ~WMA, name = 'Weighted Moving Average', 
@@ -196,6 +199,8 @@ shinyApp(
                                   mode = 'lines+markers', linetype = I("dash") )
      graph <- graph %>% add_trace(y = ~linear_reg, name = 'Linear Regression', 
                                   mode = 'lines+markers', linetype = I("dash") )
+     graph <- graph %>% add_trace(y = ~MAX_CAP, name = 'Maximum Capacity', 
+                                  mode = 'lines+markers', linetype = I("dot") )
      graph
      })
     
