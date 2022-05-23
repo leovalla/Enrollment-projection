@@ -129,12 +129,18 @@ shinyApp(
                        weights over time"),
                tags$ h5("It creates a simple linear regression (SLR) model with 
                         the last three periods and projects enrollment for the 
-                        current one")),
+                        current one"),
+               hr(),
+               
+               tags$ h4("202270 Data gathered from Banner"),
+               tags$ h5("Last update: 05/23/22, 11:00 am")
+               ),
       
       
       # Main panel for displaying outputs ----
       mainPanel(
-        plotlyOutput(outputId = "linechart" )
+        plotlyOutput(outputId = "linechart" ),
+        tableOutput("table.out")
       )
     ))
     ,
@@ -181,6 +187,62 @@ shinyApp(
       exp_data <- exp_smoot_nt(wma_data)
       complet_data <- lin_reg(exp_data)
       
+      # Includes terms that are missing in Data to be able to do the graph 
+      if (!(201770 %in% complet_data$TERM)){
+        temp <- c(TERM = 201770, ENROLL = NA,  
+                  PROJECTED_CAP = NA,MAX_CAP = NA,SECTIONS = NA, 
+                  WMA = NA, exp_smo = NA, linear_reg = NA)
+        complet_data[nrow(complet_data) + 1, ] <- as.list(temp)
+      }
+      if (!(201870 %in% complet_data$TERM)){
+        temp <- c(TERM = 201870, ENROLL = NA,  
+                  PROJECTED_CAP = NA,MAX_CAP = NA,SECTIONS = NA, 
+                  WMA = NA, exp_smo = NA, linear_reg = NA)
+        complet_data[nrow(complet_data) + 1, ] <- as.list(temp)
+      }
+      if (!(201970 %in% complet_data$TERM)){
+        temp <- c(TERM = 201970, ENROLL = NA,  
+                  PROJECTED_CAP = NA,MAX_CAP = NA,SECTIONS = NA, 
+                  WMA = NA, exp_smo = NA, linear_reg = NA)
+        complet_data[nrow(complet_data) + 1, ] <- as.list(temp)
+      }
+      if (!(202070 %in% complet_data$TERM)){
+        temp <- c(TERM = 202070, ENROLL = NA,  
+                  PROJECTED_CAP = NA,MAX_CAP = NA,SECTIONS = NA, 
+                  WMA = NA, exp_smo = NA, linear_reg = NA)
+        complet_data[nrow(complet_data) + 1, ] <- as.list(temp)
+      }
+      if (!(202170 %in% complet_data$TERM)){
+        temp <- c(TERM = 202170, ENROLL = NA,  
+                   PROJECTED_CAP = NA,MAX_CAP = NA,SECTIONS = NA, 
+                   WMA = NA, exp_smo = NA, linear_reg = NA)
+        complet_data[nrow(complet_data) + 1, ] <- as.list(temp)
+      }
+      if (!(202270 %in% complet_data$TERM)){
+        temp <- c(TERM = 202270, ENROLL = NA,  
+                  PROJECTED_CAP = NA,MAX_CAP = NA,SECTIONS = NA, 
+                  WMA = NA, exp_smo = NA, linear_reg = NA)
+        complet_data[nrow(complet_data) + 1, ] <- as.list(temp)
+      }
+      
+      complet_data$TERM <- as.factor(complet_data$TERM)
+      complet_data$ENROLL <- as.integer(complet_data$ENROLL)
+      complet_data$PROJECTED_CAP  <- as.integer(complet_data$PROJECTED_CAP )
+      complet_data$MAX_CAP <- as.integer(complet_data$MAX_CAP)
+      complet_data$SECTIONS <- as.integer(complet_data$SECTIONS)
+      
+      complet_data <- complet_data %>% arrange(TERM)
+      
+      #complet_data$TERM <- as.numeric(complet_data$TERM)
+      
+      # table code
+      output$table.out <- renderTable({
+        newTable <- complet_data %>% select(-c(WMA, exp_smo,linear_reg)) %>%
+          mutate(REMAINING_SEATS = MAX_CAP - ENROLL)
+        
+        print(newTable)
+      })
+      
       # Graph code
       graph <- plot_ly(complet_data, x= ~as.factor(TERM), y= ~ENROLL, 
                        name = 'Enrollment', type="scatter", mode="lines", 
@@ -193,15 +255,20 @@ shinyApp(
                        rangemode = "tozero"),
           plot_bgcolor = '#f0f0f0'
         )
-     graph <- graph %>% add_trace(y = ~WMA, name = 'Weighted Moving Average', 
-                                  mode = 'lines+markers', linetype = I("dash") )
-     graph <- graph %>% add_trace(y = ~exp_smo, name = 'Exponential smoothing',
-                                  mode = 'lines+markers', linetype = I("dash") )
-     graph <- graph %>% add_trace(y = ~linear_reg, name = 'Linear Regression', 
-                                  mode = 'lines+markers', linetype = I("dash") )
-     graph <- graph %>% add_trace(y = ~MAX_CAP, name = 'Maximum Capacity', 
-                                  mode = 'lines+markers', linetype = I("dot") )
-     graph
+
+      graph <- graph %>% add_trace(y = ~WMA, name = 'Weighted Moving Average', 
+                                   mode = 'lines+markers', linetype = I("dash") )
+      graph <- graph %>% add_trace(y = ~exp_smo, name = 'Exponential smoothing',
+                                   mode = 'lines+markers', linetype = I("dash") )
+      graph <- graph %>% add_trace(y = ~linear_reg, name = 'Linear Regression', 
+                                   mode = 'lines+markers', linetype = I("dash") )
+      graph <- graph %>% add_trace(y = ~MAX_CAP, name = 'Maximum Capacity', 
+                                   mode = 'lines+markers', linetype = I("dot") )
+      graph <- graph %>% add_trace(y = ~PROJECTED_CAP, name = 'Projected cap', 
+                                   mode = 'lines+markers', linetype = I("dot") )
+
+      graph
+      
      })
     
   },
