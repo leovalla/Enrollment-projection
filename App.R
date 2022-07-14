@@ -3,7 +3,7 @@
 # the data. Ones aggregated its project enrollment for future periods. 
 #
 # Author: Leo Valladares
-# Last modification: 2022-05-31
+# Last modification: 2022-07-14
 
 
 library(shiny);library(shinyjs); library(shinythemes)
@@ -97,7 +97,7 @@ shinyApp(
                                   choices = list("000" = 0,"100" = 1,"200" = 2,
                                                  "300"= 3,"400" = 4,"500"= 5,
                                                  "600" = 6), inline = TRUE,
-                                  selected = c(0,1,2,3,4,5,6)),
+                                  selected = c(1,2)),
                tags$h6("Warning: Do not uncheck all boxes. It 
                        will crash the program"),
                hr(),
@@ -120,33 +120,32 @@ shinyApp(
                  )
                ),
                hr(),
-           
-               # helping text 
-               tags$h5("Weighted Moving Average: Uses the past three periods to 
-               project enrollment for the current period. It Assigns more weight 
-               to the closest period and less to the farthest ones"),
-               tags$h5("Exponential Smoothing: Assigns exponentially decreasing 
-                       weights over time"),
-               tags$ h5("It creates a simple linear regression (SLR) model with 
-                        the last three periods and projects enrollment for the 
-                        current one"),
-               hr(),
                
-               tags$ h4("202270 Data gathered from warehouse"),
-               tags$ h5("Last update: 05/27/22, 1:30 pm")
-               ), # sidebar Panel end
+               tags$ h4("202270 Data gathered from warehouse and Banner"),
+               tags$ h5("Last update: 07/05/22, 10:30 am")
+               , width = 3), # sidebar Panel end
       
       
       # Main panel for displaying outputs ----
       mainPanel(
         tabsetPanel(type = "pills",
+                    tabPanel('Enrollment status',
+                             list(div(tableOutput("tableEnroll.out"),style = "font-size:150%"),
+                                  div(tableOutput("tableSections.out"),style = "font-size:120%"))),
                     tabPanel('Enrollment projection',
-                             list(plotlyOutput(outputId = "linechart" ),
-                                  tableOutput("table.out"))),
+                             list( p("Weighted Moving Average: Uses the past three periods to 
+                             project enrollment for the current period. It Assigns more weight 
+                                     to the closest period and less to the farthest ones."),
+                                   p("Exponential Smoothing: Assigns exponentially decreasing 
+                                     weights over time."),
+                                   p("Linear regression: It creates a simple linear regression
+                                   (SLR) model with the last three periods and projects 
+                                   enrollment for the current one."),
+                                   plotlyOutput(outputId = "linechart" ),
+                                   tableOutput("table.out"))),
                     tabPanel("Section by capacity",
-                             
                              sliderInput("capacity", label = "Available capacity (%)",
-                      min = 1, max = 100, value = c(50,100)),
+                      min = -100, max = 100, value = c(50,100)),
                       tableOutput("tablecap.out")),
                     tabPanel('New Students Distribution',
                              numericInput('newStudents',
@@ -193,9 +192,63 @@ shinyApp(
       vars = c("CAMPUS", "CORE", "COURSE_NUMB", "SUBJ_CODE", "SECT_TYPE")
     )
     
-
     #######################################
     # First tab Enrollment projection code
+    ######################################
+    
+    # table Enrollment projection code
+    output$tableEnroll.out <- renderTable({
+      
+      # Calculates the sum of the columns used in the projection by term
+      tempData <- res_mod() 
+      
+      complet_data <- tempData %>% group_by(TERM) %>%
+        summarise(ENROLL = sum(ENROLL), PROJECTED_CAP = sum(PROJECTED_CAP),
+                  MAX_CAP = sum(MAX_CAP), SECTIONS = sum(SECTIONS))
+      
+      # Order data by Term
+      complet_data <- complet_data %>% arrange(TERM)
+      
+      # Transform data classes for a cleaner look
+      complet_data$TERM <- as.factor(complet_data$TERM)
+      complet_data$ENROLL <- as.integer(complet_data$ENROLL)
+      complet_data$PROJECTED_CAP <- as.integer(complet_data$PROJECTED_CAP )
+      complet_data$MAX_CAP <- as.integer(complet_data$MAX_CAP)
+      complet_data$SECTIONS <- as.integer(complet_data$SECTIONS)
+      
+      # table Enrollment projection code
+      output$tableSections.out <- renderTable({
+        
+        # Calculates the sum of the columns used in the projection by term
+        complet_data2 <- tempData %>% filter(TERM == 202270) 
+        
+        # Transform data classes for a cleaner look
+        complet_data2$TERM <- as.factor(complet_data2$TERM)
+        complet_data2$ENROLL <- as.integer(complet_data2$ENROLL)
+        complet_data2$PROJECTED_CAP  <- as.integer(complet_data2$PROJECTED_CAP )
+        complet_data2$MAX_CAP <- as.integer(complet_data2$MAX_CAP)
+        complet_data2$SECTIONS <- as.integer(complet_data2$SECTIONS)
+        
+        # includes remaining seats and availability columns
+        newTable2 <- complet_data2 %>% mutate(REMAINING_SEATS = MAX_CAP - ENROLL) %>%
+          mutate(AVAILABILITY = REMAINING_SEATS/MAX_CAP*100) %>%
+          select(TERM,SUBJ_CODE,COURSE_NUMB,SECT_TYPE,CAMPUS,ENROLL,PROJECTED_CAP,
+                 MAX_CAP,SECTIONS,REMAINING_SEATS,AVAILABILITY) %>% 
+          rename(SUBJ = SUBJ_CODE, COURSE = COURSE_NUMB,PROJ_CAP = PROJECTED_CAP, 
+                 SECT_T = SECT_TYPE)
+        
+        print(newTable2)
+      })
+      
+      newTable <- complet_data %>% mutate(REMAINING_SEATS = MAX_CAP - ENROLL)
+      
+      print(newTable)
+      
+    })
+    
+    
+    #######################################
+    # Second tab Enrollment projection code
     ######################################
     
     output$linechart <- renderPlotly({
@@ -311,7 +364,7 @@ shinyApp(
     
     
     #######################################
-    # Second tab Section by capacity code
+    # Third tab Section by capacity code
     #######################################
     
     # Capacity percentage available
@@ -326,6 +379,7 @@ shinyApp(
         select(TERM,COURSE,ENROLL,PROJECTED_CAP,MAX_CAP,SECTIONS)
     
       # Transform data classes for a cleaner look
+      complet_data$TERM <- as.factor(complet_data$TERM)
       complet_data$ENROLL <- as.integer(complet_data$ENROLL)
       complet_data$PROJECTED_CAP  <- as.integer(complet_data$PROJECTED_CAP )
       complet_data$MAX_CAP <- as.integer(complet_data$MAX_CAP)
@@ -361,6 +415,15 @@ shinyApp(
       headCount2 <- headCount %>% filter(TERM != 202270 & 
                                            subj_CRSE %in% classes2022$subj_CRSE )
       
+      # Double 202170 headcount for more weight in last term
+      for (i in 1:length(headCount2$TERM)) {
+        if(headCount2$TERM[i] == 202170){
+          headCount2$NEWENR[i] <- headCount2$NEWENR[i] * 2
+          headCount2$CONTENR[i] <- headCount2$CONTENR[i] * 2 
+        }
+      }
+      
+      # total headcount, includes 202170 twice to give more weight to last term
       headCountNew <- sum(headCount2$NEWENR)
       headCountCont<- sum(headCount2$CONTENR)
       
@@ -382,8 +445,9 @@ shinyApp(
       
 
       # New students input
-      newStu <- input$newStudents
-      oldStu <- input$oldStudents
+      newStu <- input$newStudents * 5.5496 # this number is the average number of 
+                                           # classes a new student takes
+      oldStu <- input$oldStudents * 4.5458
       
       # 2022 data 
       data2022 <- data2 %>% filter (TERM == 202270) %>% 
@@ -428,8 +492,8 @@ shinyApp(
       
       output$totalStu <- renderText({
         
-        str <- paste("<B>Total New Students:</B>",as.integer(table2[2]), sep=" ")
-        str2 <- paste("<B>Total Cont. Students:</B>",as.integer(table2[3]), sep=" ")
+        str <- paste("<B>Seats needed for New Students:</B>",as.integer(table2[2]), sep=" ")
+        str2 <- paste("<B>Seats needed for Cont. Students:</B>",as.integer(table2[3]), sep=" ")
         str3 <- paste("<B>Remaining Seats:</B>",as.integer(table2[4]), sep=" ")
         
         str4 <- paste(str, str2, str3, sep = "\t")
